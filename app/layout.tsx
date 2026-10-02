@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI Tools | Design for Gen AI",
-  description: "Explore a collection of example AI assistants for learning, writing, and programming.",
+  title: "Humor Lab | Design for Gen AI",
+  description: "A little AI, a little imagination, and a reason to laugh. Explore our image-to-caption humor project.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

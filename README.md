@@ -1,36 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Humor Lab — Design for Gen AI
 
-## Getting Started
+A Next.js app exploring an image-to-funny-caption project. The public collection reads live rows from Supabase. Google login creates a profile automatically; members complete their names, optionally upload a photo, and enter a protected studio. AI caption generation is a future feature.
 
-First, run the development server:
+## Local development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
+cp .env.example .env.local
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local. Use the same values in Vercel. Never commit .env.local, Google client secrets, or Supabase service-role keys.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Supabase setup
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Run migrations in order in SQL Editor:
 
-## Learn More
+1. supabase/migrations/202609240001_create_ai_tools.sql (the existing collection).
+2. supabase/migrations/202610020001_profiles_and_avatars.sql (run once).
 
-To learn more about Next.js, take a look at the following resources:
+The new migration creates public.profiles, with a UUID primary key referencing auth.users. Nullable names remain blank after signup so the user is prompted to fill them. An AFTER INSERT trigger creates the row automatically and existing accounts are backfilled. Users can select and update only their own profile. The app verifies users again in each protected page and server action.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Photos live in the private avatars Storage bucket. The database stores only the object path. Files are limited to 2 MB and JPG/PNG/WebP; server-side checks verify the file signature. Storage policies restrict access to the authenticated user's folder. The profile page uses a temporary signed URL to display the photo.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Google OAuth setup
 
-## Deploy on Vercel
+Create your own Google Cloud OAuth web client with basic Google identity scopes. Add this Google authorized redirect URI:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```text
+https://ujidqnigsaglauhazrll.supabase.co/auth/v1/callback
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Save the client ID and secret in Supabase → Authentication → Sign In / Providers → Google. The secret belongs only in Supabase, not in the Next.js environment or GitHub.
+
+Supabase → Authentication → URL Configuration:
+
+- Set Site URL to the production website.
+- Allow http://localhost:3000/auth/callback for local development.
+- Allow https://design-for-gen-ai-project.vercel.app/auth/callback.
+- Add the exact final deployment URL followed by /auth/callback before submitting it.
+
+The app's redirectTo is always `${window.location.origin}/auth/callback`, without custom query parameters. Supabase adds its authorization code automatically. The callback exchanges the code for a cookie-based session and sends the user to /profile. @supabase/ssr plus Next.js 16 proxy.ts keeps sessions refreshed without caching private responses.
+
+Use Google's production audience setting so teachers can sign in. Request only openid, email, and profile identity scopes.
+
+## Pages
+
+- /: public collection from Supabase.
+- /login: Google sign-in/signup.
+- /auth/callback: OAuth code exchange.
+- /profile: authenticated profile editor; prompts for missing names.
+- /studio: requires authentication and completed names.
+
+Navigation shows profile/studio/sign-out controls only when signed in. Direct requests to protected routes are also guarded on the server.
+
+## Validation
+
+```bash
+pnpm lint
+pnpm build
+pnpm start
+node scripts/check-public-routes.mjs http://localhost:3000
+```
+
+Run supabase/tests/profile_access.sql in SQL Editor to check the signup trigger and profile isolation. All test accounts and edits are rolled back.
+
+Manual end-to-end check: sign in with Google as a new user, confirm the missing-name prompt, save names and a photo, reload to verify persistence, open the studio, sign out, and confirm a direct studio request returns to login. Open the exact deployment URL without a Vercel session to check public access.
+
+## Deployment
+
+Commit and push to the existing GitHub repository. Vercel deploys the connected branch automatically. Keep Deployment Protection disabled for the assignment, verify Google login using the exact deployment domain, and submit the unique deployment URL rather than the production alias.

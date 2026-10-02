@@ -1,5 +1,7 @@
 import { connection } from "next/server";
 import { getAiTools } from "@/lib/ai-tools";
+import Link from "next/link";
+import { SiteHeader } from "@/components/site-header";
 
 export default async function Home() {
   await connection();
@@ -8,14 +10,12 @@ export default async function Home() {
 
   return (
     <main className="mx-auto w-full max-w-6xl px-6 py-10 sm:px-12 sm:py-16">
-      <header className="flex items-center justify-between border-b border-stone-300 pb-6">
-        <span className="text-sm font-semibold tracking-widest">GEN AI / FIELD NOTES</span>
-        <span className="rounded-full border border-stone-300 px-3 py-1 text-xs">Tool collection</span>
-      </header>
+      <SiteHeader />
       <section className="pb-12 pt-16 sm:pt-24" aria-labelledby="page-title">
-        <p className="mb-5 text-sm font-medium uppercase tracking-widest text-teal-800">A small collection of possibilities</p>
-        <h1 id="page-title" className="max-w-3xl text-5xl font-semibold leading-tight tracking-tight sm:text-7xl">AI tools for everyday ideas.</h1>
-        <p className="mt-6 max-w-xl text-lg leading-8 text-stone-600">Explore example assistants for learning, writing, and building. A starting point for imagining what you could create.</p>
+        <p className="mb-5 text-sm font-medium uppercase tracking-widest text-teal-800">Serious about being unserious</p>
+        <h1 id="page-title" className="max-w-3xl text-5xl font-semibold leading-tight tracking-tight sm:text-7xl">Every picture has a funny side.</h1>
+        <p className="mt-6 max-w-xl text-lg leading-8 text-stone-600">We’re exploring how AI can turn images into funny comments. Discover our project ideas, build your profile, and join the members’ studio.</p>
+        <Link href="/studio" className="mt-8 inline-block rounded-full bg-teal-900 px-6 py-3 text-sm font-medium text-white hover:bg-teal-800">Explore the studio →</Link>
       </section>
       <section aria-labelledby="collection-title">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3 border-t border-stone-300 pt-6">
@@ -40,7 +40,7 @@ export default async function Home() {
         )}
       </section>
       <footer className="mt-16 flex flex-wrap justify-between gap-3 border-t border-stone-300 pt-6 text-xs text-stone-600">
-        <span>Design for Gen AI</span><span>Curiosity is a good place to start.</span>
+        <span>Design for Gen AI · Humor Lab</span><span>A little imagination goes a long way.</span>
       </footer>
     </main>
   );
