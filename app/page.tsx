@@ -40,7 +40,7 @@ export default async function Home() {
         )}
       </section>
       <footer className="mt-16 flex flex-wrap justify-between gap-3 border-t border-stone-300 pt-6 text-xs text-stone-600">
-        <span>Design for Gen AI · Humor Lab</span><span>A little imagination goes a long way.</span>
+        <span>Design for Gen AI · Humor Lab</span><Link href="/privacy" className="hover:underline">Privacy</Link><span>A little imagination goes a long way.</span>
       </footer>
     </main>
   );

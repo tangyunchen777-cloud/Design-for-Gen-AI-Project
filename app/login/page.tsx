@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { SiteHeader } from "@/components/site-header";
 import { GoogleButton } from "./google-button";
+import Link from "next/link";
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const supabase = await createClient();
@@ -16,7 +17,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <p className="mt-5 leading-7 text-stone-600">Sign in to set up your profile and explore the members’ studio. New here? Your Google account creates your Humor Lab account automatically.</p>
       {error && <p role="alert" className="mt-5 rounded-xl bg-red-50 p-4 text-sm text-red-800">Sign-in was not completed. Please try again using this browser.</p>}
       <GoogleButton />
-      <p className="mt-5 text-xs leading-5 text-stone-500">We use Google for sign-in. We never ask for your Google password.</p>
+      <p className="mt-5 text-xs leading-5 text-stone-500">We use Google for sign-in. We never ask for your Google password. <Link href="/privacy" className="text-teal-800 underline">Read our privacy information.</Link></p>
     </section>
   </main>;
 }
