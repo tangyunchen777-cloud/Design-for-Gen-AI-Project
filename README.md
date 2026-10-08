@@ -1,6 +1,6 @@
 # Humor Lab — Design for Gen AI
 
-A Next.js app exploring an image-to-funny-caption project. The public collection reads live rows from Supabase. Google login creates a profile automatically; members complete their names, optionally upload a photo, and enter a protected studio. AI caption generation is a future feature.
+A Next.js, Supabase, Gemini, and Vercel app where members turn Columbia/NYC moments into AI captions and vote on the funniest results.
 
 ## Local development
 
@@ -10,7 +10,7 @@ cp .env.example .env.local
 pnpm dev
 ```
 
-Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local. Use the same values in Vercel. Never commit .env.local, Google client secrets, or Supabase service-role keys.
+Set NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, and the server-only GEMINI_API_KEY in .env.local. Use the same values in Vercel. Never commit .env.local, Google client secrets, Gemini keys, or Supabase service-role keys.
 
 ## Supabase setup
 
@@ -18,6 +18,9 @@ Run migrations in order in SQL Editor:
 
 1. supabase/migrations/202609240001_create_ai_tools.sql (the existing collection).
 2. supabase/migrations/202610020001_profiles_and_avatars.sql (run once).
+3. supabase/migrations/202610080001_generations_and_votes.sql (Assignment 4).
+
+The Assignment 4 migration adds `generations` and `votes`. Prompts, captions, and model names are saved for each generation. RLS permits public caption reads, authenticated creation, and only a voter to create/change/remove their own vote. `generation_vote_summary()` returns aggregate scores without exposing voter IDs.
 
 The new migration creates public.profiles, with a UUID primary key referencing auth.users. Nullable names remain blank after signup so the user is prompted to fill them. An AFTER INSERT trigger creates the row automatically and existing accounts are backfilled. Users can select and update only their own profile. The app verifies users again in each protected page and server action.
 

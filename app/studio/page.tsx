@@ -1,28 +1,25 @@
 import { redirect } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { isProfileComplete, requireProfile } from "@/lib/profile";
-import { getAiTools } from "@/lib/ai-tools";
+import { getGenerations } from "@/lib/generations";
+import { GenerationCard } from "@/components/generation-card";
+import { GenerationForm } from "./generation-form";
 
 export default async function StudioPage() {
   const { profile } = await requireProfile();
   if (!isProfileComplete(profile)) redirect("/profile");
-  const tools = await getAiTools();
+  const generations = await getGenerations(6);
   return <main className="mx-auto w-full max-w-6xl px-6 py-10 sm:px-12">
     <SiteHeader />
     <section className="pb-12 pt-16">
-      <p className="text-sm font-medium uppercase tracking-widest text-teal-800">Members’ studio · Just for you</p>
-      <h1 className="mt-5 max-w-3xl text-5xl font-semibold leading-tight tracking-tight sm:text-6xl">Welcome to the punchline, {profile.first_name}.</h1>
-      <p className="mt-6 max-w-xl text-lg leading-8 text-stone-600">A private space to explore our image-to-caption project. One image, a little imagination, and a reason to laugh.</p>
+      <p className="text-sm font-medium uppercase tracking-widest text-teal-800">Members’ studio · Make today’s post</p>
+      <h1 className="mt-5 max-w-3xl text-5xl font-semibold leading-tight tracking-tight sm:text-6xl">What did New York do now, {profile.first_name}?</h1>
+      <p className="mt-6 max-w-2xl text-lg leading-8 text-stone-600">Describe a moment that could be a photo, choose the comic energy, and Gemini will turn it into a caption for the community to rate.</p>
     </section>
-    <section className="rounded-3xl bg-teal-900 p-8 text-white sm:p-12" aria-labelledby="workflow-title">
-      <h2 id="workflow-title" className="text-2xl font-semibold">The idea behind Humor Lab</h2>
-      <ol className="mt-8 grid gap-8 md:grid-cols-3">{[
-        ["01", "Start with an image", "An everyday moment, an unexpected expression, or something delightfully awkward."],
-        ["02", "Find its funny side", "Imagine a playful caption, a dry observation, or a little friendly sarcasm."],
-        ["03", "Share the laugh", "Choose the comment that turns a simple picture into a memorable joke."],
-      ].map(([number, title, detail]) => <li key={number}><p className="font-mono text-sm text-teal-200">{number}</p><h3 className="mt-3 text-lg font-semibold">{title}</h3><p className="mt-3 text-sm leading-6 text-teal-50">{detail}</p></li>)}</ol>
-      <p className="mt-9 border-t border-teal-700 pt-5 text-sm text-teal-100">This is our project concept. AI caption generation is coming in a future version.</p>
+    <section className="rounded-3xl bg-teal-900 p-8 text-white sm:p-12" aria-labelledby="generator-title">
+      <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-medium uppercase tracking-widest text-lime-300">Powered by Gemini</p><h2 id="generator-title" className="mt-3 text-3xl font-semibold">Build a caption contender</h2></div><span className="rounded-full border border-teal-600 px-3 py-1 text-xs text-teal-100">8 generations / hour</span></div>
+      <GenerationForm />
     </section>
-    <section className="mt-12" aria-labelledby="ideas-title"><h2 id="ideas-title" className="text-xl font-semibold">Project ideas from our collection</h2><ul className="mt-5 grid gap-5 md:grid-cols-3">{tools.map(tool => <li key={tool.id} className="rounded-2xl border border-stone-200 bg-white p-7"><p className="text-xs font-medium text-teal-800">{tool.category}</p><h3 className="mt-4 text-xl font-semibold">{tool.name}</h3><p className="mt-3 text-sm leading-6 text-stone-600">{tool.description}</p></li>)}</ul></section>
+    <section className="mt-12" aria-labelledby="recent-title"><div className="flex items-center justify-between gap-4"><h2 id="recent-title" className="text-xl font-semibold">Recent contenders</h2><a href="/feed" className="text-sm font-medium text-teal-800 hover:underline">See the full feed →</a></div>{generations.length ? <div className="mt-5 grid gap-5 md:grid-cols-2">{generations.map(generation => <GenerationCard key={generation.id} generation={generation} signedIn />)}</div> : <p className="mt-5 rounded-2xl border border-dashed border-stone-300 bg-white p-8 text-stone-600">No captions yet. Yours can be first.</p>}</section>
   </main>;
 }

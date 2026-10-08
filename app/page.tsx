@@ -14,8 +14,8 @@ export default async function Home() {
       <section className="pb-12 pt-16 sm:pt-24" aria-labelledby="page-title">
         <p className="mb-5 text-sm font-medium uppercase tracking-widest text-teal-800">Serious about being unserious</p>
         <h1 id="page-title" className="max-w-3xl text-5xl font-semibold leading-tight tracking-tight sm:text-7xl">Every picture has a funny side.</h1>
-        <p className="mt-6 max-w-xl text-lg leading-8 text-stone-600">We’re exploring how AI can turn images into funny comments. Discover our project ideas, build your profile, and join the members’ studio.</p>
-        <Link href="/studio" className="mt-8 inline-block rounded-full bg-teal-900 px-6 py-3 text-sm font-medium text-white hover:bg-teal-800">Explore the studio →</Link>
+        <p className="mt-6 max-w-xl text-lg leading-8 text-stone-600">Turn the awkward little moments of campus and New York life into AI captions, then help the funniest ones rise.</p>
+        <div className="mt-8 flex flex-wrap gap-3"><Link href="/feed" className="inline-block rounded-full bg-teal-900 px-6 py-3 text-sm font-medium text-white hover:bg-teal-800">See today’s battle →</Link><Link href="/studio" className="inline-block rounded-full border border-stone-300 bg-white px-6 py-3 text-sm font-medium hover:border-teal-700">Make a caption</Link></div>
       </section>
       <section aria-labelledby="collection-title">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3 border-t border-stone-300 pt-6">

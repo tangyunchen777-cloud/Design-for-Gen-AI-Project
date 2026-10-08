@@ -10,6 +10,7 @@ export async function SiteHeader() {
       <Link href="/" className="text-sm font-semibold tracking-widest">HUMOR LAB <span className="text-teal-700">/</span> GEN AI</Link>
       <nav aria-label="Main navigation" className="flex flex-wrap items-center gap-5 text-sm">
         <Link href="/" className="hover:underline">Collection</Link>
+        <Link href="/feed" className="hover:underline">Caption battle</Link>
         {user ? <>
           <Link href="/studio" className="hover:underline">Members’ studio</Link>
           <Link href="/profile" className="hover:underline">My profile</Link>
