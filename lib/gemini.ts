@@ -13,19 +13,30 @@ type GeminiResponse = {
   error?: { message?: string };
 };
 
+export type CaptionImage = {
+  base64: string;
+  mimeType: "image/jpeg" | "image/png" | "image/webp";
+};
+
 const sleep = (milliseconds: number) =>
   new Promise((resolve) => setTimeout(resolve, milliseconds));
 
-export async function createCaption(prompt: string) {
+export async function createCaption(prompt: string, image?: CaptionImage) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("AI captioning is not configured yet.");
 
   const instruction = [
-    "Write one original, concise, campus-friendly image caption.",
+    image
+      ? "Look closely at the attached image and write one original, concise, campus-friendly caption about what is visibly happening."
+      : "Write one original, concise, campus-friendly caption for the scene in the prompt.",
     "Be playful, not cruel. Never target protected traits, reveal private information, or explain the joke.",
+    "Do not identify real people or infer sensitive traits.",
     "Return only the caption, with no quotation marks.",
     prompt,
   ].join("\n");
+
+  const parts: Array<Record<string, unknown>> = [{ text: instruction }];
+  if (image) parts.push({ inlineData: { mimeType: image.mimeType, data: image.base64 } });
 
   for (const model of MODELS) {
     for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -35,7 +46,7 @@ export async function createCaption(prompt: string) {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
           body: JSON.stringify({
-            contents: [{ role: "user", parts: [{ text: instruction }] }],
+            contents: [{ role: "user", parts }],
             generationConfig: { temperature: 1.1, maxOutputTokens: 80 },
           }),
           cache: "no-store",

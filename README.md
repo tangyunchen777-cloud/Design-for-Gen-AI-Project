@@ -1,6 +1,6 @@
 # Humor Lab — Design for Gen AI
 
-A Next.js, Supabase, Gemini, and Vercel app where members turn Columbia/NYC moments into AI captions and vote on the funniest results.
+A Next.js, Supabase, Gemini, and Vercel app where members turn written prompts or uploaded Columbia/NYC photos into AI captions and vote on the funniest results.
 
 ## Local development
 
@@ -18,9 +18,10 @@ Run migrations in order in SQL Editor:
 
 1. supabase/migrations/202609240001_create_ai_tools.sql (the existing collection).
 2. supabase/migrations/202610020001_profiles_and_avatars.sql (run once).
-3. supabase/migrations/202610080001_generations_and_votes.sql (Assignment 4).
+3. supabase/migrations/202610080001_generations_and_votes.sql (Assignment 4 tables and voting).
+4. supabase/migrations/202610080002_optional_generation_images.sql (optional public post images).
 
-The Assignment 4 migration adds `generations` and `votes`. Prompts, captions, and model names are saved for each generation. RLS permits public caption reads, authenticated creation, and only a voter to create/change/remove their own vote. `generation_vote_summary()` returns aggregate scores without exposing voter IDs.
+The Assignment 4 migrations add `generations`, `votes`, and the optional `generation-images` Storage bucket. Prompts, captions, model names, and optional image paths are saved for each generation. RLS permits public post reads, restricts image uploads and generation inserts to the signed-in user's own folder/account, and allows only a voter to create/change/remove their own vote. `generation_vote_summary()` returns aggregate scores without exposing voter IDs.
 
 The new migration creates public.profiles, with a UUID primary key referencing auth.users. Nullable names remain blank after signup so the user is prompted to fill them. An AFTER INSERT trigger creates the row automatically and existing accounts are backfilled. Users can select and update only their own profile. The app verifies users again in each protected page and server action.
 
@@ -68,7 +69,7 @@ node scripts/check-public-routes.mjs http://localhost:3000
 
 Run supabase/tests/profile_access.sql in SQL Editor to check the signup trigger and profile isolation. All test accounts and edits are rolled back.
 
-Manual end-to-end check: sign in with Google as a new user, confirm the missing-name prompt, save names and a photo, reload to verify persistence, open the studio, sign out, and confirm a direct studio request returns to login. Open the exact deployment URL without a Vercel session to check public access.
+Manual end-to-end check: sign in with Google, generate once from a written prompt and once from an uploaded JPG/PNG/WebP image, confirm both appear in the feed, cast and change a vote, then sign out and confirm the feed remains public while generation and voting require authentication. Open the exact deployment URL without a Vercel session to check public access.
 
 ## Deployment
 

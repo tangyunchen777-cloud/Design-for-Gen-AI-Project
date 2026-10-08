@@ -7,6 +7,7 @@ export type Generation = {
   style: "witty" | "deadpan" | "absurd";
   caption: string;
   model: string;
+  image_url: string | null;
   created_at: string;
   upvotes: number;
   downvotes: number;
@@ -26,7 +27,7 @@ export async function getGenerations(limit = 30): Promise<Generation[]> {
   const supabase = await createClient();
   const [{ data: rows, error }, { data: summaries, error: summaryError }] = await Promise.all([
     supabase.from("generations")
-      .select("id, scene, style, caption, model, created_at")
+      .select("id, scene, style, caption, model, image_path, created_at")
       .order("created_at", { ascending: false }).limit(limit),
     supabase.rpc("generation_vote_summary"),
   ]);
@@ -38,8 +39,12 @@ export async function getGenerations(limit = 30): Promise<Generation[]> {
 
   return (rows ?? []).map((row) => {
     const votes = voteByGeneration.get(row.id);
+    const imageUrl = row.image_path
+      ? supabase.storage.from("generation-images").getPublicUrl(row.image_path).data.publicUrl
+      : null;
     return {
       ...row,
+      image_url: imageUrl,
       upvotes: Number(votes?.upvotes ?? 0),
       downvotes: Number(votes?.downvotes ?? 0),
       score: Number(votes?.score ?? 0),
