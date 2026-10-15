@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Generation } from "@/lib/generations";
 import { VoteControls } from "@/components/vote-controls";
 
-export function GenerationCard({ generation, signedIn }: { generation: Generation; signedIn: boolean }) {
+export function GenerationCard({ generation, signedIn, loginHref = "/login?next=%2Ffeed" }: { generation: Generation; signedIn: boolean; loginHref?: string }) {
   const date = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(generation.created_at));
   const hasDirection = generation.scene !== "Uploaded image with no additional direction.";
   const vibe = generation.style === "witty" ? "bg-lime-200 text-teal-950" : generation.style === "deadpan" ? "bg-sky-100 text-sky-950" : "bg-rose-100 text-rose-950";
@@ -16,7 +16,7 @@ export function GenerationCard({ generation, signedIn }: { generation: Generatio
     <blockquote className="mt-6 text-2xl font-semibold leading-snug tracking-tight">“{generation.caption}”</blockquote>
     {hasDirection && <p className="mt-5 text-sm leading-6 text-stone-600"><span className="font-medium text-stone-900">{generation.image_url ? "Creator’s direction:" : "The scene:"}</span> {generation.scene}</p>}
     <div className="mt-auto flex items-end justify-between gap-4 border-t border-stone-200 pt-6">
-      {signedIn ? <VoteControls generationId={generation.id} upvotes={generation.upvotes} downvotes={generation.downvotes} myVote={generation.my_vote} /> : <Link href="/login" className="text-sm font-medium text-teal-800 hover:underline">Sign in to vote →</Link>}
+      {signedIn ? <VoteControls generationId={generation.id} upvotes={generation.upvotes} downvotes={generation.downvotes} myVote={generation.my_vote} /> : <Link href={loginHref} className="text-sm font-medium text-teal-800 hover:underline">Sign in to vote →</Link>}
       <p className="text-right text-xs text-stone-400">Laugh score<br /><span className="text-lg font-semibold text-stone-700">{generation.score}</span></p>
     </div>
   </article>;

@@ -3,7 +3,8 @@ import { getDailyPrompt } from "@/lib/daily-prompt";
 
 export function DailyPrompt({ signedIn }: { signedIn: boolean }) {
   const prompt = getDailyPrompt();
-  const href = signedIn ? `/studio?prompt=${encodeURIComponent(prompt)}` : "/login";
+  const studioPath = `/studio?prompt=${encodeURIComponent(prompt)}`;
+  const href = signedIn ? studioPath : `/login?next=${encodeURIComponent(studioPath)}`;
 
   return <section className="relative mb-16 overflow-hidden rounded-[2rem] bg-teal-950 p-7 text-white shadow-[8px_8px_0_#bef264] sm:p-10" aria-labelledby="daily-prompt-title">
     <span className="absolute -right-8 -top-8 h-32 w-32 rounded-full border-[18px] border-coral/80" aria-hidden="true" />

@@ -2,8 +2,11 @@ import Link from "next/link";
 import { SiteHeader } from "@/components/site-header";
 import { isProfileComplete, requireProfile } from "@/lib/profile";
 import { ProfileForm } from "./profile-form";
+import { safeReturnPath } from "@/lib/return-path";
 
-export default async function ProfilePage() {
+export default async function ProfilePage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
+  const requestedNext = (await searchParams).next;
+  const returnPath = requestedNext ? safeReturnPath(requestedNext) : undefined;
   const { supabase, user, profile } = await requireProfile();
   const complete = isProfileComplete(profile);
   let avatarUrl: string | undefined;
@@ -27,7 +30,7 @@ export default async function ProfilePage() {
           ) : <div aria-label="No profile photo yet" className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-teal-50 text-2xl font-medium text-teal-900">{profile.first_name?.slice(0, 1).toUpperCase() || "?"}</div>}
           <div className="min-w-0"><p className="font-medium">{complete ? `${profile.first_name} ${profile.last_name}` : "Your profile"}</p><p className="mt-1 break-all text-sm text-stone-500">{user.email}</p><span className="mt-2 inline-block rounded-full bg-stone-100 px-3 py-1 text-xs">Google account</span></div>
         </div>
-        <ProfileForm profile={profile} />
+        <ProfileForm profile={profile} returnPath={returnPath} />
       </div>
       {complete && <Link href="/studio" className="mt-6 inline-block text-sm font-medium text-teal-800 hover:underline">Craft humor →</Link>}
     </section>

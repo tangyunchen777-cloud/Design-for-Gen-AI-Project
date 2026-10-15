@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { safeReturnPath } from "@/lib/return-path";
 
 export type ProfileState = { error?: string; success?: string };
 
@@ -46,6 +47,8 @@ export async function saveProfile(_previous: ProfileState, formData: FormData): 
   if (newPath && profile.avatar_path) await supabase.storage.from("avatars").remove([profile.avatar_path]);
   revalidatePath("/profile");
   revalidatePath("/studio");
+  const requestedNext = formData.get("next");
+  if (requestedNext) redirect(safeReturnPath(requestedNext));
   return { success: "Profile saved. You’re ready for the studio!" };
 }
 

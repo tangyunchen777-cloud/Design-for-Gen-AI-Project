@@ -4,10 +4,11 @@ import { useActionState, useState } from "react";
 import { saveProfile } from "./actions";
 import type { Profile } from "@/lib/profile";
 
-export function ProfileForm({ profile }: { profile: Profile }) {
+export function ProfileForm({ profile, returnPath }: { profile: Profile; returnPath?: string }) {
   const [state, action, pending] = useActionState(saveProfile, {});
   const [photoName, setPhotoName] = useState("No file selected");
   return <form action={action} className="space-y-6">
+    {returnPath && <input type="hidden" name="next" value={returnPath} />}
     <div className="grid gap-5 sm:grid-cols-2">
       <label className="block text-sm font-medium">First name
         <input name="first_name" autoComplete="given-name" defaultValue={profile.first_name ?? ""} maxLength={80} required className="mt-2 w-full rounded-xl border border-stone-300 bg-white px-4 py-3" />

@@ -14,7 +14,7 @@ export async function SiteHeader() {
           <Link href="/studio" className="rounded-full bg-coral px-4 py-2.5 text-stone-950 shadow-[2px_2px_0_#202b29] transition hover:-translate-y-0.5">Craft humor</Link>
           <Link href="/profile" className="rounded-full px-4 py-2.5 text-stone-700 transition hover:bg-white hover:text-teal-900">Profile</Link>
           <form action={signOut}><button className="rounded-full border border-stone-300 bg-white px-4 py-2 hover:border-teal-700">Sign out</button></form>
-        </> : <Link href="/login" className="rounded-full bg-teal-900 px-5 py-2.5 text-white hover:bg-teal-800">Sign in to craft</Link>}
+        </> : <Link href="/login?next=%2Fstudio" className="rounded-full bg-teal-900 px-5 py-2.5 text-white hover:bg-teal-800">Sign in to craft</Link>}
       </nav>
     </header>
   );

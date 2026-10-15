@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-export function GoogleButton() {
+export function GoogleButton({ returnPath }: { returnPath: string }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   async function signIn() {
@@ -12,7 +12,7 @@ export function GoogleButton() {
     try {
       const { error } = await createClient().auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: `${window.location.origin}/auth/callback` },
+        options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(returnPath)}` },
       });
       if (error) throw error;
     } catch {

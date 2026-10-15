@@ -21,7 +21,9 @@ export async function proxy(request: NextRequest) {
   const { data, error } = await supabase.auth.getClaims();
   response.headers.set("Cache-Control", "private, no-store");
   if ((request.nextUrl.pathname === "/profile" || request.nextUrl.pathname === "/studio") && (error || !data?.claims)) {
-    const login = NextResponse.redirect(new URL("/login", request.url));
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("next", `${request.nextUrl.pathname}${request.nextUrl.search}`);
+    const login = NextResponse.redirect(loginUrl);
     response.cookies.getAll().forEach(cookie => login.cookies.set(cookie));
     ["Cache-Control", "Expires", "Pragma"].forEach(name => {
       const value = response.headers.get(name);

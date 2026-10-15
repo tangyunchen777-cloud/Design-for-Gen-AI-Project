@@ -34,6 +34,7 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
     b.upvotes - a.upvotes || b.score - a.score || Date.parse(b.created_at) - Date.parse(a.created_at),
   )[0] ?? null;
   const collection = generations.filter((generation) => generation.id !== headline?.id);
+  const voteReturnPath = `/login?next=${encodeURIComponent(`/feed?period=${period}`)}`;
 
   return <main className="mx-auto w-full max-w-6xl px-6 py-10 sm:px-12 sm:py-16">
     <SiteHeader />
@@ -41,12 +42,12 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
       <p className="text-sm font-bold uppercase tracking-[.2em] text-teal-800">Humors · The community collection</p>
       <div className="mt-5 flex flex-wrap items-end justify-between gap-6">
         <div><h1 className="text-5xl font-black tracking-tight sm:text-6xl">Funny lives here.</h1><p className="mt-4 max-w-2xl text-lg leading-8 text-stone-600">Fresh AI captions from campus photos, New York observations, and minds that should probably be studying.</p></div>
-        <Link href={user ? "/studio" : "/login"} className="rounded-full bg-coral px-6 py-3 text-sm font-bold text-stone-950 shadow-[3px_3px_0_#202b29] transition hover:-translate-y-0.5">{user ? "Craft humor →" : "Sign in to craft →"}</Link>
+        <Link href={user ? "/studio" : "/login?next=%2Fstudio"} className="rounded-full bg-coral px-6 py-3 text-sm font-bold text-stone-950 shadow-[3px_3px_0_#202b29] transition hover:-translate-y-0.5">{user ? "Craft humor →" : "Sign in to craft →"}</Link>
       </div>
     </section>
     {headline && <section className="mb-14" aria-labelledby="headline-title">
       <div className="mb-5 flex items-center gap-4"><div><p className="text-xs font-bold uppercase tracking-[.2em] text-coral">Most upvoted this week</p><h2 id="headline-title" className="mt-1 text-3xl font-black">The headline humor</h2></div><div className="h-px flex-1 bg-stone-300" /></div>
-      <div className="relative max-w-3xl"><span className="absolute -right-3 -top-3 z-10 rotate-6 rounded-full bg-lime-300 px-4 py-2 text-xs font-black text-teal-950 shadow-[3px_3px_0_#115e59]">▲ {headline.upvotes} THIS WEEK</span><GenerationCard generation={headline} signedIn={Boolean(user)} /></div>
+      <div className="relative max-w-3xl"><span className="absolute -right-3 -top-3 z-10 rotate-6 rounded-full bg-lime-300 px-4 py-2 text-xs font-black text-teal-950 shadow-[3px_3px_0_#115e59]">▲ {headline.upvotes} THIS WEEK</span><GenerationCard generation={headline} signedIn={Boolean(user)} loginHref={voteReturnPath} /></div>
     </section>}
 
     <section aria-labelledby="collection-title">
@@ -57,7 +58,7 @@ export default async function FeedPage({ searchParams }: { searchParams: Promise
         </nav>
       </div>
       {collection.length ? <div className="grid gap-5 md:grid-cols-2" aria-label={`${periods[period].label} AI-generated captions`}>
-        {collection.map((generation) => <GenerationCard key={generation.id} generation={generation} signedIn={Boolean(user)} />)}
+        {collection.map((generation) => <GenerationCard key={generation.id} generation={generation} signedIn={Boolean(user)} loginHref={voteReturnPath} />)}
       </div> : <div className="rounded-3xl border border-dashed border-stone-300 bg-white p-12 text-center"><h3 className="text-2xl font-semibold">No other humors in this collection yet.</h3><p className="mt-3 text-stone-600">Craft a caption and give the crowd something new to rate.</p></div>}
     </section>
   </main>;
