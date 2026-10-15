@@ -16,7 +16,7 @@ for (const path of ["/", "/login"]) {
   const response = await fetch(new URL(path, base));
   assert.equal(response.status, 200);
   const html = await response.text();
-  assert.ok(html.includes(path === "/" ? "Every picture has a funny side." : "Continue with Google"));
+  assert.ok(html.includes(path === "/" ? "Turn real life into" : "Continue with Google"));
   console.log(`PASS ${path} is public`);
 }
 const collection = await fetch(new URL("/api/ai-tools", base));
