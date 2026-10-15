@@ -32,4 +32,10 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
-export const config = { matcher: ["/", "/login", "/profile", "/studio", "/auth/:path*"] };
+export const config = {
+  matcher: [
+    // Refresh Supabase sessions on every page navigation. Static assets and
+    // public API reads do not need auth-cookie work.
+    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
+};

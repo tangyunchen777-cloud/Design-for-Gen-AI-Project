@@ -44,7 +44,9 @@ Supabase → Authentication → URL Configuration:
 - Allow https://design-for-gen-ai-project.vercel.app/auth/callback.
 - Add the exact final deployment URL followed by /auth/callback before submitting it.
 
-The app's redirectTo is always `${window.location.origin}/auth/callback`, without custom query parameters. Supabase adds its authorization code automatically. The callback exchanges the code for a cookie-based session and sends the user to /profile. @supabase/ssr plus Next.js 16 proxy.ts keeps sessions refreshed without caching private responses.
+The app's redirectTo is always `${window.location.origin}/auth/callback`, without custom query parameters. Supabase adds its authorization code automatically. The callback exchanges the code for a persistent cookie-based session and sends the user to /profile. @supabase/ssr plus Next.js 16 proxy.ts refreshes sessions on every page navigation without caching private responses.
+
+Use the stable production alias for everyday browsing. Vercel commit-specific deployment hostnames are separate cookie origins, so a session created on one deployment URL cannot be read by a different deployment URL. The unique deployment URL is still appropriate for the assignment submission, but repeatedly testing new deployments requires signing in once per hostname by browser design.
 
 Use Google's production audience setting so teachers can sign in. Request only openid, email, and profile identity scopes.
 
