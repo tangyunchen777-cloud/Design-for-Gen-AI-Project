@@ -6,16 +6,15 @@ export async function SiteHeader() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   return (
-    <header className="flex flex-wrap items-center justify-between gap-5 border-b border-stone-300 pb-6">
-      <Link href="/" className="text-sm font-semibold tracking-widest">HUMOR LAB <span className="text-teal-700">/</span> GEN AI</Link>
-      <nav aria-label="Main navigation" className="flex flex-wrap items-center gap-5 text-sm">
-        <Link href="/" className="hover:underline">Collection</Link>
-        <Link href="/feed" className="hover:underline">Caption battle</Link>
+    <header className="flex flex-wrap items-center justify-between gap-5 border-b border-stone-300 pb-5">
+      <Link href="/" className="group flex items-center gap-2 font-black tracking-tight"><span className="grid h-9 w-9 -rotate-3 place-items-center rounded-xl bg-lime-300 text-lg shadow-[2px_2px_0_#115e59] transition group-hover:rotate-3" aria-hidden="true">HA</span><span>HUMOR LAB</span></Link>
+      <nav aria-label="Main navigation" className="flex flex-wrap items-center gap-2 text-sm font-semibold">
+        <Link href="/feed" className="rounded-full px-4 py-2.5 text-stone-700 transition hover:bg-white hover:text-teal-900">Humors</Link>
         {user ? <>
-          <Link href="/studio" className="hover:underline">Members’ studio</Link>
-          <Link href="/profile" className="hover:underline">My profile</Link>
-          <form action={signOut}><button className="rounded-full border border-stone-300 px-4 py-2 hover:bg-white">Sign out</button></form>
-        </> : <Link href="/login" className="rounded-full bg-teal-900 px-5 py-2 text-white hover:bg-teal-800">Sign in</Link>}
+          <Link href="/studio" className="rounded-full bg-coral px-4 py-2.5 text-stone-950 shadow-[2px_2px_0_#202b29] transition hover:-translate-y-0.5">Craft humor</Link>
+          <Link href="/profile" className="rounded-full px-4 py-2.5 text-stone-700 transition hover:bg-white hover:text-teal-900">Profile</Link>
+          <form action={signOut}><button className="rounded-full border border-stone-300 bg-white px-4 py-2 hover:border-teal-700">Sign out</button></form>
+        </> : <Link href="/login" className="rounded-full bg-teal-900 px-5 py-2.5 text-white hover:bg-teal-800">Sign in to craft</Link>}
       </nav>
     </header>
   );

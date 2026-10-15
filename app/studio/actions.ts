@@ -1,14 +1,45 @@
 "use server";
 
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { createCaption } from "@/lib/gemini";
 import { isProfileComplete, requireProfile } from "@/lib/profile";
 
-export type GenerationState = { error?: string; success?: string };
+export type CaptionPreview = {
+  caption: string;
+  token: string;
+  style: "witty" | "deadpan" | "absurd";
+  hasImage: boolean;
+};
+export type PreviewState = { error?: string; preview?: CaptionPreview };
+export type PublishState = { error?: string; success?: string };
 export type VoteState = { error?: string };
-const styles = new Set(["witty", "deadpan", "absurd"]);
+const styles = new Set<CaptionPreview["style"]>(["witty", "deadpan", "absurd"]);
+const previewLifetime = 15 * 60 * 1000;
 
-function detectImage(bytes: Uint8Array) {
+type ImageFormat = { extension: "jpg" | "png" | "webp"; mimeType: "image/jpeg" | "image/png" | "image/webp" };
+type GenerationInput = {
+  scene: string;
+  storedScene: string;
+  style: CaptionPreview["style"];
+  prompt: string;
+  imageBytes: Uint8Array | null;
+  imageFormat: ImageFormat | null;
+  imageHash: string | null;
+};
+type PreviewPayload = {
+  version: 1;
+  userId: string;
+  caption: string;
+  model: string;
+  scene: string;
+  style: CaptionPreview["style"];
+  prompt: string;
+  imageHash: string | null;
+  issuedAt: number;
+};
+
+function detectImage(bytes: Uint8Array): ImageFormat | null {
   const jpeg = bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
   const png = [137, 80, 78, 71, 13, 10, 26, 10].every((value, index) => bytes[index] === value);
   const decoder = new TextDecoder();
@@ -19,23 +50,21 @@ function detectImage(bytes: Uint8Array) {
   return null;
 }
 
-export async function generateCaption(
-  _previous: GenerationState,
-  formData: FormData,
-): Promise<GenerationState> {
-  const { supabase, user, profile } = await requireProfile();
-  if (!isProfileComplete(profile)) return { error: "Complete your profile before generating." };
-
+async function parseGenerationInput(formData: FormData): Promise<{ error: string } | { input: GenerationInput }> {
+  const mode = String(formData.get("mode") ?? "photo");
   const scene = String(formData.get("scene") ?? "").trim().replace(/\s+/g, " ");
-  const style = String(formData.get("style") ?? "");
+  const styleValue = String(formData.get("style") ?? "");
+  const style = styles.has(styleValue as CaptionPreview["style"]) ? styleValue as CaptionPreview["style"] : null;
   const imageEntry = formData.get("image");
-  const hasImage = imageEntry instanceof File && imageEntry.size > 0;
-  if (!hasImage && (scene.length < 12 || scene.length > 500)) return { error: "Describe the moment in 12–500 characters, or upload an image." };
+  const hasImage = mode === "photo" && imageEntry instanceof File && imageEntry.size > 0;
+  if (!new Set(["photo", "prompt"]).has(mode)) return { error: "Choose photo or written scene mode." };
+  if (mode === "photo" && !hasImage) return { error: "Add a photo before crafting the caption." };
+  if (mode === "prompt" && (scene.length < 12 || scene.length > 500)) return { error: "Describe the moment in 12–500 characters." };
   if (hasImage && scene.length > 500) return { error: "Keep the optional image direction under 500 characters." };
-  if (!styles.has(style)) return { error: "Choose one of the available humor styles." };
+  if (!style) return { error: "Choose one of the available humor vibes." };
 
   let imageBytes: Uint8Array | null = null;
-  let imageFormat: ReturnType<typeof detectImage> = null;
+  let imageFormat: ImageFormat | null = null;
   if (hasImage) {
     if (imageEntry.size > 4 * 1024 * 1024) return { error: "Choose an image smaller than 4 MB." };
     imageBytes = new Uint8Array(await imageEntry.arrayBuffer());
@@ -43,10 +72,7 @@ export async function generateCaption(
     if (!imageFormat) return { error: "Choose a real JPG, PNG, or WebP image." };
   }
 
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-  const { data: recentCount } = await supabase.rpc("my_generation_count_since", { since_time: oneHourAgo });
-  if (Number(recentCount ?? 0) >= 8) return { error: "You’ve reached the hourly limit. Come back with fresh material soon." };
-
+  const storedScene = scene || "Uploaded image with no additional direction.";
   const prompt = [
     hasImage
       ? `Creator direction: ${scene || "No extra direction; rely on the uploaded image."}`
@@ -56,46 +82,133 @@ export async function generateCaption(
     "Write one punchy caption under 140 characters.",
   ].join("\n");
 
-  try {
-    const image = imageBytes && imageFormat ? {
-      base64: Buffer.from(imageBytes).toString("base64"),
-      mimeType: imageFormat.mimeType,
-    } : undefined;
-    const { caption, model } = await createCaption(prompt, image);
+  return { input: {
+    scene,
+    storedScene,
+    style,
+    prompt,
+    imageBytes,
+    imageFormat,
+    imageHash: imageBytes ? createHash("sha256").update(imageBytes).digest("hex") : null,
+  } };
+}
 
+function previewSecret() {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) throw new Error("Caption generation is not configured yet.");
+  return `${key}:humor-lab-preview-v1`;
+}
+
+function signPreview(payload: PreviewPayload) {
+  const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const signature = createHmac("sha256", previewSecret()).update(body).digest("base64url");
+  return `${body}.${signature}`;
+}
+
+function verifyPreview(token: string, userId: string): PreviewPayload | null {
+  const parts = token.split(".");
+  if (parts.length !== 2) return null;
+  const [body, signature] = parts;
+  const supplied = Buffer.from(signature, "base64url");
+  const expected = createHmac("sha256", previewSecret()).update(body).digest();
+  if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) return null;
+  try {
+    const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as PreviewPayload;
+    if (payload.version !== 1 || payload.userId !== userId || !styles.has(payload.style)) return null;
+    if (!Number.isFinite(payload.issuedAt) || typeof payload.model !== "string" || typeof payload.scene !== "string") return null;
+    if (Date.now() - payload.issuedAt > previewLifetime || payload.issuedAt > Date.now() + 30_000) return null;
+    if (!payload.caption || payload.caption.length > 280 || !payload.prompt || payload.prompt.length > 2_000) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+async function reachedHourlyLimit(supabase: Awaited<ReturnType<typeof requireProfile>>["supabase"]) {
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const { data: recentCount } = await supabase.rpc("my_generation_count_since", { since_time: oneHourAgo });
+  return Number(recentCount ?? 0) >= 8;
+}
+
+export async function previewCaption(formData: FormData): Promise<PreviewState> {
+  const { supabase, user, profile } = await requireProfile();
+  if (!isProfileComplete(profile)) return { error: "Complete your profile before generating." };
+
+  const parsed = await parseGenerationInput(formData);
+  if ("error" in parsed) return parsed;
+  if (await reachedHourlyLimit(supabase)) return { error: "You’ve reached the hourly limit. Come back with fresh material soon." };
+  const { input } = parsed;
+
+  try {
+    const image = input.imageBytes && input.imageFormat ? {
+      base64: Buffer.from(input.imageBytes).toString("base64"),
+      mimeType: input.imageFormat.mimeType,
+    } : undefined;
+    const { caption, model } = await createCaption(input.prompt, image);
+    const token = signPreview({
+      version: 1,
+      userId: user.id,
+      caption,
+      model,
+      scene: input.storedScene,
+      style: input.style,
+      prompt: input.prompt,
+      imageHash: input.imageHash,
+      issuedAt: Date.now(),
+    });
+    return { preview: { caption, token, style: input.style, hasImage: Boolean(input.imageBytes) } };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Caption generation failed." };
+  }
+}
+
+export async function publishCaption(token: string, formData: FormData): Promise<PublishState> {
+  const { supabase, user, profile } = await requireProfile();
+  if (!isProfileComplete(profile)) return { error: "Complete your profile before publishing." };
+  const payload = verifyPreview(token, user.id);
+  if (!payload) return { error: "That preview expired or is not valid. Craft a fresh caption." };
+
+  const parsed = await parseGenerationInput(formData);
+  if ("error" in parsed) return parsed;
+  const { input } = parsed;
+  if (payload.scene !== input.storedScene || payload.style !== input.style || payload.prompt !== input.prompt || payload.imageHash !== input.imageHash) {
+    return { error: "Your photo, scene, or vibe changed. Craft a fresh preview before publishing." };
+  }
+  if (await reachedHourlyLimit(supabase)) return { error: "You’ve reached the hourly limit. Come back with fresh material soon." };
+
+  try {
     let imagePath: string | null = null;
-    if (imageBytes && imageFormat) {
-      imagePath = `${user.id}/${crypto.randomUUID()}.${imageFormat.extension}`;
+    if (input.imageBytes && input.imageFormat) {
+      imagePath = `${user.id}/${crypto.randomUUID()}.${input.imageFormat.extension}`;
       const { error: uploadError } = await supabase.storage.from("generation-images")
-        .upload(imagePath, imageBytes, { contentType: imageFormat.mimeType, upsert: false });
+        .upload(imagePath, input.imageBytes, { contentType: input.imageFormat.mimeType, upsert: false });
       if (uploadError) {
         console.error("Generation image upload failed", uploadError.message);
-        return { error: "Your caption was generated, but the image could not be published. Please try again." };
+        return { error: "The image could not be published. Please try again." };
       }
     }
 
-    const storedScene = scene || "Uploaded image with no additional direction.";
     const { error } = await supabase.from("generations").insert({
       creator_id: user.id,
-      scene: storedScene,
-      style,
-      prompt,
-      caption,
-      model,
+      scene: payload.scene,
+      style: payload.style,
+      prompt: payload.prompt,
+      caption: payload.caption,
+      model: payload.model,
       image_path: imagePath,
     });
     if (error) {
       console.error("Generation insert failed", error.message);
       if (imagePath) await supabase.storage.from("generation-images").remove([imagePath]);
-      return { error: "Your caption was generated but could not be saved. Please try again." };
+      return { error: "Your caption could not be published. Please try again." };
     }
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "Caption generation failed." };
+    return { error: error instanceof Error ? error.message : "Caption publishing failed." };
   }
 
   revalidatePath("/studio");
   revalidatePath("/feed");
-  return { success: "Caption generated and published to today’s battle." };
+  return { success: "Published to Humors." };
 }
 
 export async function voteForGeneration(

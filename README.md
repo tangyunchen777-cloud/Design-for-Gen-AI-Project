@@ -54,9 +54,9 @@ Use Google's production audience setting so teachers can sign in. Request only o
 - /login: Google sign-in/signup.
 - /auth/callback: OAuth code exchange.
 - /profile: authenticated profile editor; prompts for missing names.
-- /studio: requires authentication and completed names.
+- /studio: requires authentication and completed names. Users add a photo or written scene, choose a humor vibe, generate a private caption preview, and explicitly publish only after approval.
 
-Navigation shows profile/studio/sign-out controls only when signed in. Direct requests to protected routes are also guarded on the server.
+Navigation shows Humors, Craft humor, profile, and sign-out controls only when appropriate. Direct requests to protected routes are also guarded on the server. Caption previews are signed, expire after 15 minutes, and are not uploaded or inserted into Supabase until the creator publishes them.
 
 ## Validation
 
