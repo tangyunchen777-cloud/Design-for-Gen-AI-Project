@@ -10,11 +10,61 @@ const vibes = [
   { value: "absurd", label: "Absurd", detail: "Delightfully chaotic", emoji: "?!" },
 ] as const;
 
+async function cropToFourThree(file: File, focusX: number, focusY: number) {
+  const sourceUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const element = new Image();
+      element.onload = () => resolve(element);
+      element.onerror = () => reject(new Error("That image could not be cropped."));
+      element.src = sourceUrl;
+    });
+    const targetWidth = 1200;
+    const targetHeight = 900;
+    const targetRatio = targetWidth / targetHeight;
+    const sourceRatio = image.naturalWidth / image.naturalHeight;
+    let sourceWidth = image.naturalWidth;
+    let sourceHeight = image.naturalHeight;
+    let sourceX = 0;
+    let sourceY = 0;
+
+    if (sourceRatio > targetRatio) {
+      sourceWidth = image.naturalHeight * targetRatio;
+      sourceX = (image.naturalWidth - sourceWidth) * (focusX / 100);
+    } else {
+      sourceHeight = image.naturalWidth / targetRatio;
+      sourceY = (image.naturalHeight - sourceHeight) * (focusY / 100);
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Your browser could not prepare the crop.");
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, targetWidth, targetHeight);
+    context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, targetWidth, targetHeight);
+    const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(
+      (result) => result ? resolve(result) : reject(new Error("That image could not be cropped.")),
+      "image/jpeg",
+      0.9,
+    ));
+    const baseName = file.name.replace(/\.[^.]+$/, "") || "humor-photo";
+    return new File([blob], `${baseName}-cropped.jpg`, { type: "image/jpeg", lastModified: file.lastModified });
+  } finally {
+    URL.revokeObjectURL(sourceUrl);
+  }
+}
+
 export function GenerationForm({ initialScene = "" }: { initialScene?: string }) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
+  const preparedImageRef = useRef<File | null>(null);
   const [mode, setMode] = useState<"photo" | "prompt">(initialScene ? "prompt" : "photo");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [cropX, setCropX] = useState(50);
+  const [cropY, setCropY] = useState(50);
   const [preview, setPreview] = useState<CaptionPreview | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isCrafting, startCrafting] = useTransition();
@@ -25,6 +75,7 @@ export function GenerationForm({ initialScene = "" }: { initialScene?: string })
   }, [imageUrl]);
 
   function resetPreview() {
+    preparedImageRef.current = null;
     setPreview(null);
     setMessage(null);
   }
@@ -33,6 +84,7 @@ export function GenerationForm({ initialScene = "" }: { initialScene?: string })
     if (nextMode === mode) return;
     setMode(nextMode);
     setImageUrl(null);
+    setSelectedImage(null);
     resetPreview();
   }
 
@@ -42,7 +94,18 @@ export function GenerationForm({ initialScene = "" }: { initialScene?: string })
     if (!form || !form.reportValidity()) return;
     setMessage(null);
     startCrafting(async () => {
-      const result = await previewCaption(new FormData(form));
+      const formData = new FormData(form);
+      if (mode === "photo" && selectedImage) {
+        try {
+          const croppedImage = await cropToFourThree(selectedImage, cropX, cropY);
+          preparedImageRef.current = croppedImage;
+          formData.set("image", croppedImage);
+        } catch (error) {
+          setMessage(error instanceof Error ? error.message : "That image could not be cropped.");
+          return;
+        }
+      }
+      const result = await previewCaption(formData);
       if (result.error) {
         setPreview(null);
         setMessage(result.error);
@@ -57,7 +120,9 @@ export function GenerationForm({ initialScene = "" }: { initialScene?: string })
     if (!form || !preview) return;
     setMessage(null);
     startPublishing(async () => {
-      const result = await publishCaption(preview.token, new FormData(form));
+      const formData = new FormData(form);
+      if (preparedImageRef.current) formData.set("image", preparedImageRef.current);
+      const result = await publishCaption(preview.token, formData);
       if (result.error) {
         setMessage(result.error);
         return;
@@ -89,7 +154,7 @@ export function GenerationForm({ initialScene = "" }: { initialScene?: string })
               {imageUrl ? <div className="relative">
                 {/* Blob URLs are local previews and cannot use next/image. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={imageUrl} alt="Selected photo preview" className="aspect-[4/3] w-full object-cover" />
+                <img src={imageUrl} alt="Selected photo crop preview" className="aspect-[4/3] w-full object-cover" style={{ objectPosition: `${cropX}% ${cropY}%` }} />
                 <span className="absolute bottom-3 right-3 rounded-full bg-white/95 px-3 py-2 text-xs font-semibold text-stone-800 shadow">Change photo</span>
               </div> : <div className="grid min-h-48 place-items-center p-8 text-center">
                 <div><span className="text-4xl" aria-hidden="true">＋</span><p className="mt-2 font-semibold text-stone-800">Drop in a funny moment</p><p className="mt-1 text-xs text-stone-500">JPG, PNG, or WebP · 4 MB max</p></div>
@@ -97,10 +162,25 @@ export function GenerationForm({ initialScene = "" }: { initialScene?: string })
               <input id="image" name="image" type="file" accept="image/jpeg,image/png,image/webp" required className="sr-only"
                 onChange={(event) => {
                   const file = event.currentTarget.files?.[0];
+                  setSelectedImage(file ?? null);
                   setImageUrl(file ? URL.createObjectURL(file) : null);
+                  setCropX(50);
+                  setCropY(50);
                   resetPreview();
                 }} />
             </label>
+            {imageUrl && <fieldset className="border-t border-stone-200 bg-white px-4 py-4">
+              <legend className="px-1 text-sm font-semibold text-stone-800">Adjust crop</legend>
+              <p className="mb-3 text-xs leading-5 text-stone-500">Move the frame until the important part of your photo is centered.</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="text-xs font-medium text-stone-600">Horizontal position
+                  <input type="range" min="0" max="100" value={cropX} onChange={(event) => setCropX(Number(event.target.value))} className="mt-2 w-full accent-teal-800" />
+                </label>
+                <label className="text-xs font-medium text-stone-600">Vertical position
+                  <input type="range" min="0" max="100" value={cropY} onChange={(event) => setCropY(Number(event.target.value))} className="mt-2 w-full accent-teal-800" />
+                </label>
+              </div>
+            </fieldset>}
             <details className="border-t border-stone-200 bg-white px-4 py-3">
               <summary className="cursor-pointer text-sm font-medium text-teal-800">Add a direction <span className="font-normal text-stone-400">(optional)</span></summary>
               <textarea name="scene" maxLength={500} rows={2} placeholder="e.g. Make it about surviving the 1 train"
@@ -153,7 +233,7 @@ export function GenerationForm({ initialScene = "" }: { initialScene?: string })
         {preview.hasImage && imageUrl ? <>
           {/* Blob URLs are local previews and cannot use next/image. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={imageUrl} alt="Captioned photo preview" className="aspect-[4/3] w-full rounded-xl object-cover" />
+          <img src={imageUrl} alt="Captioned photo preview" className="aspect-[4/3] w-full rounded-xl object-cover" style={{ objectPosition: `${cropX}% ${cropY}%` }} />
         </> : <div className="grid aspect-[4/3] place-items-center rounded-xl bg-[radial-gradient(circle_at_20%_20%,#bef264_0,transparent_30%),radial-gradient(circle_at_80%_70%,#fb7185_0,transparent_34%),#134e4a] text-6xl" aria-hidden="true">✦</div>}
         <blockquote className="mt-6 text-2xl font-bold leading-snug tracking-tight text-stone-900">“{preview.caption}”</blockquote>
         <p className="mt-3 text-xs text-stone-500">Nothing is public yet. Love it, or let AI take another swing.</p>
