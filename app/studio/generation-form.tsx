@@ -10,10 +10,10 @@ const vibes = [
   { value: "absurd", label: "Absurd", detail: "Delightfully chaotic", emoji: "?!" },
 ] as const;
 
-export function GenerationForm() {
+export function GenerationForm({ initialScene = "" }: { initialScene?: string }) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
-  const [mode, setMode] = useState<"photo" | "prompt">("photo");
+  const [mode, setMode] = useState<"photo" | "prompt">(initialScene ? "prompt" : "photo");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [preview, setPreview] = useState<CaptionPreview | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -109,6 +109,7 @@ export function GenerationForm() {
           </div> : <label className="grid gap-2 text-sm font-medium text-stone-800" htmlFor="scene">
             What happened?
             <textarea id="scene" name="scene" required minLength={12} maxLength={500} rows={5}
+              defaultValue={initialScene}
               placeholder="A first-year carrying six grocery bags onto the 1 train…"
               className="resize-y rounded-2xl border border-stone-300 bg-white px-4 py-3 font-normal text-stone-900 placeholder:text-stone-400 focus:border-teal-700" />
           </label>}

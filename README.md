@@ -58,6 +58,8 @@ Use Google's production audience setting so teachers can sign in. Request only o
 - /profile: authenticated profile editor; prompts for missing names.
 - /studio: requires authentication and completed names. Users add a photo or written scene, choose a humor vibe, generate a private caption preview, and explicitly publish only after approval.
 
+Assignment 5 incorporates feedback-group notes by using plain-language navigation, reducing the workshop to three visible decisions, keeping the generated caption private until explicit publication, and reserving the curated sample memes for the homepage. A rotating daily comedy seed offers a fresh reason to return and opens the studio with the prompt already filled in.
+
 Navigation shows Humors, Craft humor, profile, and sign-out controls only when appropriate. Direct requests to protected routes are also guarded on the server. Caption previews are signed, expire after 15 minutes, and are not uploaded or inserted into Supabase until the creator publishes them.
 
 ## Validation
