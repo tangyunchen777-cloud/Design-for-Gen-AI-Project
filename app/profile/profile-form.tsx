@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { saveProfile } from "./actions";
 import type { Profile } from "@/lib/profile";
 
 export function ProfileForm({ profile }: { profile: Profile }) {
   const [state, action, pending] = useActionState(saveProfile, {});
+  const [photoName, setPhotoName] = useState("No file selected");
   return <form action={action} className="space-y-6">
     <div className="grid gap-5 sm:grid-cols-2">
       <label className="block text-sm font-medium">First name
@@ -17,7 +18,11 @@ export function ProfileForm({ profile }: { profile: Profile }) {
     </div>
     <div>
       <label className="block text-sm font-medium" htmlFor="avatar">Profile photo <span className="font-normal text-stone-500">(optional)</span></label>
-      <input id="avatar" name="avatar" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="photo-help" className="mt-3 block w-full text-sm file:mr-4 file:rounded-full file:border-0 file:bg-teal-50 file:px-4 file:py-2 file:text-teal-900" />
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <label htmlFor="avatar" className="cursor-pointer rounded-full bg-teal-50 px-4 py-2 text-sm font-semibold text-teal-900 transition hover:bg-teal-100">Choose photo</label>
+        <span className="max-w-full truncate text-sm text-stone-500" aria-live="polite">{photoName}</span>
+      </div>
+      <input id="avatar" name="avatar" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="photo-help" className="sr-only" onChange={(event) => setPhotoName(event.currentTarget.files?.[0]?.name ?? "No file selected")} />
       <p id="photo-help" className="mt-3 text-xs leading-5 text-stone-500">JPG, PNG, or WebP, up to 2 MB. Your photo is stored privately and shown in your profile.</p>
     </div>
     {state.error && <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-800">{state.error}</p>}
