@@ -1,6 +1,7 @@
 import { connection } from "next/server";
 import { getAiTools } from "@/lib/ai-tools";
 import Link from "next/link";
+import { FeaturedMemes } from "@/components/featured-memes";
 import { SiteHeader } from "@/components/site-header";
 
 export default async function Home() {
@@ -31,6 +32,7 @@ export default async function Home() {
       <section className="mb-16 grid gap-3 sm:grid-cols-3" aria-label="How Humor Lab works">
         {[["01", "Add it", "Upload a photo or write the scene."], ["02", "Vibe it", "Choose witty, deadpan, or absurd."], ["03", "Approve it", "Preview first. Publish only when ready."]].map(([number, title, copy]) => <div key={number} className="rounded-2xl border border-stone-200 bg-white p-5"><span className="font-mono text-xs font-bold text-teal-700">{number}</span><h2 className="mt-5 text-xl font-black">{title}</h2><p className="mt-2 text-sm leading-6 text-stone-600">{copy}</p></div>)}
       </section>
+      <FeaturedMemes />
       <section aria-labelledby="collection-title">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3 border-t border-stone-300 pt-6">
           <div><p className="text-xs font-bold uppercase tracking-[.2em] text-teal-800">More from the lab</p><h2 id="collection-title" className="mt-2 text-xl font-semibold">AI playground</h2></div>
