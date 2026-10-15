@@ -1,5 +1,4 @@
 import { connection } from "next/server";
-import { getAiTools } from "@/lib/ai-tools";
 import Link from "next/link";
 import { FeaturedMemes } from "@/components/featured-memes";
 import { SiteHeader } from "@/components/site-header";
@@ -8,10 +7,8 @@ import { createClient } from "@/lib/supabase/server";
 
 export default async function Home() {
   await connection();
-  const tools = await getAiTools();
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const categories = new Set(tools.map((tool) => tool.category)).size;
 
   return (
     <main className="mx-auto w-full max-w-6xl px-6 py-10 sm:px-12 sm:py-16">
@@ -38,28 +35,6 @@ export default async function Home() {
       </section>
       <DailyPrompt signedIn={Boolean(user)} />
       <FeaturedMemes />
-      <section aria-labelledby="collection-title">
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-3 border-t border-stone-300 pt-6">
-          <div><p className="text-xs font-bold uppercase tracking-[.2em] text-teal-800">More from the lab</p><h2 id="collection-title" className="mt-2 text-xl font-semibold">AI playground</h2></div>
-          <p className="text-sm text-stone-600">{tools.length} tools <span aria-hidden="true">/</span> {categories} categories</p>
-        </div>
-        {tools.length === 0 ? (
-          <p className="rounded-2xl border border-stone-300 bg-white p-8 text-stone-600">No tools yet. Check back soon for new additions.</p>
-        ) : (
-          <ul className="grid gap-5 md:grid-cols-3">
-            {tools.map((tool, index) => (
-              <li key={tool.id} className="flex min-h-72 flex-col rounded-2xl border border-stone-200 bg-white p-7 shadow-sm">
-                <div className="mb-10 flex items-center justify-between gap-3">
-                  <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-medium text-teal-900">{tool.category}</span>
-                  <span className="font-mono text-sm text-stone-400">{String(index + 1).padStart(2, "0")}</span>
-                </div>
-                <h3 className="text-2xl font-semibold tracking-tight">{tool.name}</h3>
-                <p className="mt-3 leading-7 text-stone-600">{tool.description}</p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
       <footer className="mt-16 flex flex-wrap justify-between gap-3 border-t border-stone-300 pt-6 text-xs text-stone-600">
         <span>Design for Gen AI · Humor Lab</span><Link href="/privacy" className="hover:underline">Privacy</Link><span>A little imagination goes a long way.</span>
       </footer>
