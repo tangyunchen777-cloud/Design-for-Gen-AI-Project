@@ -23,12 +23,16 @@ type VoteSummary = {
   my_vote: -1 | 1 | null;
 };
 
-export async function getGenerations(limit = 30): Promise<Generation[]> {
+export async function getGenerations(limit = 30, since?: Date): Promise<Generation[]> {
   const supabase = await createClient();
+  let generationsQuery = supabase.from("generations")
+    .select("id, scene, style, caption, model, image_path, created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (since) generationsQuery = generationsQuery.gte("created_at", since.toISOString());
+
   const [{ data: rows, error }, { data: summaries, error: summaryError }] = await Promise.all([
-    supabase.from("generations")
-      .select("id, scene, style, caption, model, image_path, created_at")
-      .order("created_at", { ascending: false }).limit(limit),
+    generationsQuery,
     supabase.rpc("generation_vote_summary"),
   ]);
 
