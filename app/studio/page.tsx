@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { isProfileComplete, requireProfile } from "@/lib/profile";
 import { getGenerations } from "@/lib/generations";
+export const maxDuration = 120;
 import { GenerationCard } from "@/components/generation-card";
 import { GenerationForm } from "./generation-form";
 

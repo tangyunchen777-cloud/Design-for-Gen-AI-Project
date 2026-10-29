@@ -2,7 +2,7 @@
 
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { revalidatePath } from "next/cache";
-import { createCaption } from "@/lib/gemini";
+import { createCaption, captionInstruction, type ModelConfig } from "@/lib/gemini";
 import { isProfileComplete, requireProfile } from "@/lib/profile";
 
 export type CaptionPreview = {
@@ -29,6 +29,7 @@ type GenerationInput = {
 };
 type PreviewPayload = {
   version: 1;
+  requestId: string;
   userId: string;
   caption: string;
   model: string;
@@ -72,7 +73,7 @@ async function parseGenerationInput(formData: FormData): Promise<{ error: string
     if (!imageFormat) return { error: "Choose a real JPG, PNG, or WebP image." };
   }
 
-  const storedScene = scene || "Uploaded image with no additional direction.";
+  const storedScene = scene ? (hasImage && scene.length < 12 ? `Uploaded image: ${scene}` : scene) : "Uploaded image with no additional direction.";
   const prompt = [
     hasImage
       ? `Creator direction: ${scene || "No extra direction; rely on the uploaded image."}`
@@ -115,6 +116,7 @@ function verifyPreview(token: string, userId: string): PreviewPayload | null {
   try {
     const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as PreviewPayload;
     if (payload.version !== 1 || payload.userId !== userId || !styles.has(payload.style)) return null;
+    if (!/^[0-9a-f-]{36}$/i.test(payload.requestId || "")) return null;
     if (!Number.isFinite(payload.issuedAt) || typeof payload.model !== "string" || typeof payload.scene !== "string") return null;
     if (Date.now() - payload.issuedAt > previewLifetime || payload.issuedAt > Date.now() + 30_000) return null;
     if (!payload.caption || payload.caption.length > 280 || !payload.prompt || payload.prompt.length > 2_000) return null;
@@ -138,15 +140,27 @@ export async function previewCaption(formData: FormData): Promise<PreviewState> 
   if ("error" in parsed) return parsed;
   if (await reachedHourlyLimit(supabase)) return { error: "You’ve reached the hourly limit. Come back with fresh material soon." };
   const { input } = parsed;
-
+  let requestId:string|undefined;
   try {
     const image = input.imageBytes && input.imageFormat ? {
       base64: Buffer.from(input.imageBytes).toString("base64"),
       mimeType: input.imageFormat.mimeType,
     } : undefined;
-    const { caption, model } = await createCaption(input.prompt, image);
+    const {data:configuration,error:configurationError}=await supabase.rpc("begin_generation",{
+      request_scene:input.storedScene,request_prompt:captionInstruction(input.prompt,Boolean(image)),request_style:input.style,request_has_image:Boolean(image),
+    });
+    if(configurationError)throw new Error(configurationError.message.includes("Hourly")?"You’ve reached the hourly limit. Try again later.":"The caption engine could not start. Please try again shortly.");
+    const config=configuration as {request_id:string;prompt:string;models:ModelConfig[]};
+    requestId=config.request_id;
+    const { caption, model } = await createCaption(config.prompt, image,config.models,async attempt=>{
+      const {error}=await supabase.rpc("record_llm_response",{request_uuid:config.request_id,response_data:attempt});
+      if(error)throw new Error("The generation trace could not be recorded. Please try again.");
+    });
+    const {error:finishError}=await supabase.rpc("finish_generation",{request_uuid:requestId,request_success:true,failure_message:null});
+    if(finishError)throw new Error("The generation result could not be saved. Please try again.");
     const token = signPreview({
       version: 1,
+      requestId,
       userId: user.id,
       caption,
       model,
@@ -158,6 +172,7 @@ export async function previewCaption(formData: FormData): Promise<PreviewState> 
     });
     return { preview: { caption, token, style: input.style, hasImage: Boolean(input.imageBytes) } };
   } catch (error) {
+    if(requestId)await supabase.rpc("finish_generation",{request_uuid:requestId,request_success:false,failure_message:error instanceof Error?error.message.slice(0,300):"Generation failed."});
     return { error: error instanceof Error ? error.message : "Caption generation failed." };
   }
 }
@@ -196,6 +211,7 @@ export async function publishCaption(token: string, formData: FormData): Promise
       caption: payload.caption,
       model: payload.model,
       image_path: imagePath,
+      generation_request_id: payload.requestId,
     });
     if (error) {
       console.error("Generation insert failed", error.message);

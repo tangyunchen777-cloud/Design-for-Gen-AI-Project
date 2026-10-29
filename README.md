@@ -60,7 +60,15 @@ Use Google's production audience setting so teachers can sign in. Request only o
 
 Assignment 5 incorporates feedback-group notes by using plain-language navigation, reducing the workshop to three visible decisions, keeping the generated caption private until explicit publication, and reserving the curated sample memes for the homepage. A rotating daily comedy seed offers a fresh reason to return and opens the studio with the prompt already filled in.
 
-Navigation shows Humors, Craft humor, profile, and sign-out controls only when appropriate. Direct requests to protected routes are also guarded on the server. Caption previews are signed, expire after 15 minutes, and are not uploaded or inserted into Supabase until the creator publishes them.
+Navigation shows Humors, Craft humor, profile, and sign-out controls only when appropriate. Direct requests to protected routes are also guarded on the server. Caption previews are signed and expire after 15 minutes. Images and public media records are created only when the creator publishes. Private generation request/response diagnostics are stored during preview generation for approved administrators.
+
+## Week 7 generation observability
+
+Apply the Week 7 migrations from the companion `humor-lab-admin` repository to the same Supabase project before deploying this version. The app now uses `begin_generation`, `record_llm_response`, and `finish_generation` with the member's session. The runtime selects a weighted chain matching the chosen style, adds active campus vocabulary and examples, and tries up to three enabled Google models in configured priority order. Provider API keys remain in the server environment; no secrets or raw image bytes are logged.
+
+The internal request stores the exact compiled prompt; a published caption keeps its original creator input and links to the request for full traceability. Every provider attempt records safe errors, timing, and available token counts. Preview requests are limited to eight per member per hour, including failed requests, rather than counting only published captions. Configuration is managed through the protected companion admin app.
+
+Run `node scripts/test-generation-observability.mjs` for retry, fallback, network failure, token accounting, safe diagnostic, and missing-key tests with mocked provider responses. No test calls the paid API.
 
 ## Validation
 
